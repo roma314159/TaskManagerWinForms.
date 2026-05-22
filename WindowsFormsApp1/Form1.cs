@@ -41,6 +41,12 @@ namespace TaskManager
 
         private void btnAdd_Click(object sender, EventArgs e)
         {
+            if (string.IsNullOrWhiteSpace(txtTitle.Text))
+            {
+                MessageBox.Show("Введите название задачи");
+                return;
+            }
+
             TaskItem task = new TaskItem
             {
                 Title = txtTitle.Text,
@@ -51,6 +57,7 @@ namespace TaskManager
             };
 
             tasks.Add(task);
+
             RefreshList();
             ClearFields();
         }
@@ -64,6 +71,7 @@ namespace TaskManager
             }
 
             TaskItem task = (TaskItem)lstTasks.SelectedItem;
+
             tasks.Remove(task);
 
             RefreshList();
@@ -140,7 +148,9 @@ namespace TaskManager
             }
 
             foreach (TaskItem t in list)
+            {
                 lstTasks.Items.Add(t);
+            }
         }
 
         private void ClearFields()
@@ -173,42 +183,97 @@ namespace TaskManager
 
         private void lstTasks_DrawItem(object sender, DrawItemEventArgs e)
         {
-            if (e.Index < 0) return;
+            if (e.Index < 0)
+                return;
 
             TaskItem task = (TaskItem)lstTasks.Items[e.Index];
 
-            Rectangle rect = new Rectangle(e.Bounds.X, e.Bounds.Y, e.Bounds.Width - 1, e.Bounds.Height - 1);
+            Rectangle rect = new Rectangle(
+                e.Bounds.X,
+                e.Bounds.Y,
+                e.Bounds.Width - 1,
+                e.Bounds.Height - 1
+            );
 
-            bool selected = (e.State & DrawItemState.Selected) == DrawItemState.Selected;
+            bool selected =
+                (e.State & DrawItemState.Selected) == DrawItemState.Selected;
+
+            bool isOverdue =
+                task.Deadline.Date < DateTime.Now.Date && !task.IsDone;
 
             Color backColor = Color.White;
 
             if (task.IsDone)
                 backColor = Color.LightGreen;
-            else if (task.Deadline < DateTime.Now)
+
+            else if (isOverdue)
                 backColor = Color.LightCoral;
 
             if (selected)
                 backColor = Color.FromArgb(80, Color.DodgerBlue);
 
-            using (Brush b = new SolidBrush(backColor))
-                e.Graphics.FillRectangle(b, rect);
+            using (Brush bg = new SolidBrush(backColor))
+            {
+                e.Graphics.FillRectangle(bg, rect);
+            }
 
-            Color border =
+            Color borderColor =
                 task.IsDone ? Color.Green :
-                task.Deadline < DateTime.Now ? Color.Red :
+                isOverdue ? Color.Red :
                 Color.Gray;
 
-            using (Pen p = new Pen(border, 2))
-                e.Graphics.DrawRectangle(p, rect);
+            using (Pen pen = new Pen(borderColor, 2))
+            {
+                e.Graphics.DrawRectangle(pen, rect);
+            }
+
+            string title = task.Title;
+            string description = task.Description;
+
+            if (title.Length > 25)
+                title = title.Substring(0, 25) + "...";
+
+            if (description.Length > 40)
+                description = description.Substring(0, 40) + "...";
+
+            string icon = "";
+            Brush iconBrush = Brushes.Black;
+
+            if (task.IsDone)
+            {
+                icon = "✔";
+                iconBrush = Brushes.Green;
+            }
+            else if (isOverdue)
+            {
+                icon = "✖";
+                iconBrush = Brushes.Red;
+            }
+
+            e.Graphics.DrawString(
+                icon,
+                new Font("Segoe UI", 16, FontStyle.Bold),
+                iconBrush,
+                rect.X + 5,
+                rect.Y + 5
+            );
 
             string text =
-                $"Название: {task.Title}\n" +
-                $"Описание: {task.Description}\n" +
+                $"Название: {title}\n" +
+                $"Описание: {description}\n" +
                 $"Приоритет: {task.Priority}\n" +
                 $"Дата: {task.Deadline:dd.MM.yyyy}";
 
-            e.Graphics.DrawString(text, e.Font, Brushes.Black, rect.X + 6, rect.Y + 6);
+            using (Brush br = new SolidBrush(Color.Black))
+            {
+                e.Graphics.DrawString(
+                    text,
+                    e.Font,
+                    br,
+                    rect.X + 35,
+                    rect.Y + 8
+                );
+            }
 
             e.DrawFocusRectangle();
         }
